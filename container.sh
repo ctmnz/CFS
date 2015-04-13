@@ -11,6 +11,12 @@ container_sshd_port="23"
 
 ############################################################################
 
+## Install yum utils
+
+yum install -y yum yum-utils 
+
+##
+
 container_dir="$('pwd')/$container_name"
 
 ## make project dir
@@ -153,7 +159,7 @@ fi
 
 systemctl daemon-reload
 systemctl enable $container_name
-#systemctl start $container_name
+systemctl start $container_name
 
 
 

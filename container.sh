@@ -4,6 +4,8 @@
 container_name="containername"
 container_root_password="containerpass"
 container_mysql_password="mysqlpassword"
+container_sshd_port="23"
+
 
 ### END ####
 
@@ -36,7 +38,7 @@ yum --installroot=$container_dir install -y rpm-build yum
 yum --installroot=$container_dir install -y passwd bash centos-release vim
 
 yum --installroot=$container_dir groupinstall -y "Minimal Install"
-yum --installroot=$container_dir install -y php php-mysql php-pecl-memcached mariadb mariadb-server
+yum --installroot=$container_dir install -y php php-mysql php-pecl-memcached mariadb mariadb-server phpMyAdmin
 yum --installroot=$container_dir install -y memcached httpd mysql mysql-server 
 yum --installroot=$container_dir clean all
 ## copyfiles from host to container
@@ -84,15 +86,58 @@ else
 		DROP DATABASE IF EXISTS test ;
 		FLUSH PRIVILEGES;
 	EOSQL
+#	sleep 5
+#	chroot $container_dir mysql --execute="source /tmp/mysql-first-time.sql"
 fi
 
+
+######### SSHD
+
+
+if [ -z "$container_sshd_port" ]
+then 
+	echo  "No ssh port enabled. skipping...."
+else
+	echo  "Setting up ssh for the container..."
+	sshSocketFile=${container_dir}/etc/systemd/system/sshd.socket
+	cat > "$sshSocketFile" <<-EOSSHDsock
+		[Unit]
+		Description=SSH Socket for Per-Connection Servers
+
+		[Socket]
+		ListenStream=${container_sshd_port}
+		Accept=yes
+	EOSSHDsock
+	sshServiceFile=${container_dir}/etc/systemd/system/sshd@.service
+	cat > "$sshServiceFile" <<-EOSSHDservice
+		[Unit]
+		Description=SSH Per-Connection Server for %I
+
+		[Service]
+		ExecStart=-/usr/sbin/sshd -i
+		StandardInput=socket
+	EOSSHDservice
+
+	## start sshd 
+	chroot $container_dir ln -s /etc/systemd/system/sshd.socket /etc/systemd/system/sockets.target.wants/
+
+fi
+
+
+
+
+
+
+############
 
 
 
 ## Start the service
 
 systemctl daemon-reload
-systemctl start $container_name
+systemctl enable $container_name
+#systemctl start $container_name
+
 
 
 

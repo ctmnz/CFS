@@ -38,6 +38,7 @@ yum --installroot=$container_dir install -y rpm-build yum
 yum --installroot=$container_dir install -y passwd bash centos-release vim
 
 yum --installroot=$container_dir groupinstall -y "Minimal Install"
+yum --installroot=$container_dir install -y openssh-server
 yum --installroot=$container_dir install -y php php-mysql php-pecl-memcached mariadb mariadb-server phpMyAdmin
 yum --installroot=$container_dir install -y memcached httpd mysql mysql-server 
 yum --installroot=$container_dir clean all
@@ -99,6 +100,20 @@ then
 	echo  "No ssh port enabled. skipping...."
 else
 	echo  "Setting up ssh for the container..."
+
+	## on the host
+
+	cat > /etc/systemd/system/$container_name\.socket <<HostEOF 
+	[Unit]
+	Description=The SSH socket for : ${container_name}
+
+	[Socket]
+	ListenStream=${container_sshd_port}
+HostEOF
+
+
+
+	## on the container
 	sshSocketFile=${container_dir}/etc/systemd/system/sshd.socket
 	cat > "$sshSocketFile" <<-EOSSHDsock
 		[Unit]
@@ -107,7 +122,7 @@ else
 		[Socket]
 		ListenStream=${container_sshd_port}
 		Accept=yes
-	EOSSHDsock
+EOSSHDsock
 	sshServiceFile=${container_dir}/etc/systemd/system/sshd@.service
 	cat > "$sshServiceFile" <<-EOSSHDservice
 		[Unit]
@@ -116,7 +131,7 @@ else
 		[Service]
 		ExecStart=-/usr/sbin/sshd -i
 		StandardInput=socket
-	EOSSHDservice
+EOSSHDservice
 
 	## start sshd 
 	chroot $container_dir ln -s /etc/systemd/system/sshd.socket /etc/systemd/system/sockets.target.wants/

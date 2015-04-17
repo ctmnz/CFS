@@ -56,6 +56,7 @@ echo root:$container_root_password | chroot $container_dir chpasswd
 chroot $container_dir systemctl enable httpd
 chroot $container_dir systemctl enable mariadb
 chroot $container_dir systemctl enable memcached
+chroot $container_dir systemctl enable sshd
 
 ### Make it as service
 
@@ -100,41 +101,42 @@ then
 	echo  "No ssh port enabled. skipping...."
 else
 	echo  "Setting up ssh for the container..."
-
+	
+	echo "Port ${container_sshd_port}" >> ${container_dir}/etc/ssh/sshd_config
 	## on the host
 
-	cat > /etc/systemd/system/$container_name\.socket <<HostEOF 
-	[Unit]
-	Description=The SSH socket for : ${container_name}
+#	cat > /etc/systemd/system/$container_name\.socket <<HostEOF 
+#	[Unit]
+#	Description=The SSH socket for : ${container_name}
 
-	[Socket]
-	ListenStream=${container_sshd_port}
-HostEOF
+#	[Socket]
+#	ListenStream=${container_sshd_port}
+#HostEOF
 
 
 
 	## on the container
-	sshSocketFile=${container_dir}/etc/systemd/system/sshd.socket
-	cat > "$sshSocketFile" <<-EOSSHDsock
-		[Unit]
-		Description=SSH Socket for Per-Connection Servers
+#	sshSocketFile=${container_dir}/etc/systemd/system/sshd.socket
+#	cat > "$sshSocketFile" <<-EOSSHDsock
+#		[Unit]
+#		Description=SSH Socket for Per-Connection Servers
 
-		[Socket]
-		ListenStream=${container_sshd_port}
-		Accept=yes
-EOSSHDsock
-	sshServiceFile=${container_dir}/etc/systemd/system/sshd@.service
-	cat > "$sshServiceFile" <<-EOSSHDservice
-		[Unit]
-		Description=SSH Per-Connection Server for %I
-
-		[Service]
-		ExecStart=-/usr/sbin/sshd -i
-		StandardInput=socket
-EOSSHDservice
+#		[Socket]
+#		ListenStream=${container_sshd_port}
+#		Accept=yes
+#EOSSHDsock
+#	sshServiceFile=${container_dir}/etc/systemd/system/sshd@.service
+#	cat > "$sshServiceFile" <<-EOSSHDservice
+#		[Unit]
+#		Description=SSH Per-Connection Server for %I
+#
+#		[Service]
+#		ExecStart=-/usr/sbin/sshd -i
+#		StandardInput=socket
+#EOSSHDservice
 
 	## start sshd 
-	chroot $container_dir ln -s /etc/systemd/system/sshd.socket /etc/systemd/system/sockets.target.wants/
+#	chroot $container_dir ln -s /etc/systemd/system/sshd.socket /etc/systemd/system/sockets.target.wants/
 
 fi
 

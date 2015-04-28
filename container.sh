@@ -11,13 +11,15 @@ container_sshd_port="23"
 
 ############################################################################
 
-## Install yum utils
-
-yum install -y yum yum-utils 
-
-##
-
 container_dir="$('pwd')/$container_name"
+
+
+## check if directory exists
+
+if [ -d "$container_dir" ]; then
+ echo "There is a container with name $container_name! exiting.... "
+ exit
+fi
 
 ## make project dir
 
